@@ -1,25 +1,10 @@
 
 import { create } from 'zustand';
-import { generateRandomId } from '@/lib/utils';
+import { supabase } from "@/integrations/supabase/client";
+import type { Database } from '@/integrations/supabase/types';
 
-export type Attendee = {
-  id: string;
-  name: string;
-  email: string;
-  avatarUrl?: string;
-  rsvpDate: string;
-  eventId: string;
-};
-
-type Event = {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  attendeeCount: number;
-};
+type Event = Database['public']['Tables']['events']['Row'];
+type Attendee = Database['public']['Tables']['attendees']['Row'];
 
 interface AttendeeState {
   attendees: Attendee[];
@@ -44,7 +29,7 @@ export const useAttendeeStore = create<AttendeeState>((set, get) => ({
   error: null,
   
   getAttendeesByEventId: (eventId: string) => {
-    return get().attendees.filter(a => a.eventId === eventId);
+    return get().attendees.filter(a => a.event_id === eventId);
   },
   
   getEventById: (eventId: string) => {
@@ -55,46 +40,20 @@ export const useAttendeeStore = create<AttendeeState>((set, get) => ({
     set({ isSubmitting: true, error: null });
     
     try {
-      // In a real app, this would be an API call
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const { error } = await supabase
+        .from('attendees')
+        .insert([{ event_id: eventId, name, email }]);
       
-      const newAttendee: Attendee = {
-        id: generateRandomId(),
-        name,
-        email,
-        rsvpDate: new Date().toISOString(),
-        eventId,
-      };
+      if (error) throw error;
       
-      set(state => ({
-        attendees: [...state.attendees, newAttendee],
-        events: state.events.map(event => 
-          event.id === eventId 
-            ? { ...event, attendeeCount: event.attendeeCount + 1 } 
-            : event
-        ),
-        isSubmitting: false,
-      }));
+      // Reload attendees to get the latest data
+      await get().loadAttendees();
       
-      // Save to local storage (mock database)
-      const currentAttendees = JSON.parse(localStorage.getItem('attendees') || '[]');
-      localStorage.setItem('attendees', JSON.stringify([...currentAttendees, newAttendee]));
-      
-      // Update event count in local storage
-      const currentEvents = JSON.parse(localStorage.getItem('events') || '[]');
-      localStorage.setItem('events', JSON.stringify(
-        currentEvents.map((event: Event) => 
-          event.id === eventId 
-            ? { ...event, attendeeCount: event.attendeeCount + 1 } 
-            : event
-        )
-      ));
-      
+      set({ isSubmitting: false });
     } catch (error) {
       set({ 
         isSubmitting: false, 
-        error: error instanceof Error ? error.message : 'An unknown error occurred' 
+        error: error instanceof Error ? error.message : 'Failed to RSVP' 
       });
       throw error;
     }
@@ -104,34 +63,18 @@ export const useAttendeeStore = create<AttendeeState>((set, get) => ({
     set({ isLoading: true, error: null });
     
     try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 600));
+      const { data: events, error } = await supabase
+        .from('events')
+        .select('*')
+        .order('date', { ascending: true });
       
-      // Check if we have events in local storage
-      const storedEvents = localStorage.getItem('events');
+      if (error) throw error;
       
-      // If no events found, create a sample event
-      if (!storedEvents) {
-        const sampleEvent: Event = {
-          id: 'evt-1',
-          title: 'Neo Tokyo 2070 Tech Summit',
-          description: 'Join the most innovative minds for a glimpse into the future of technology. Experience demos of cutting-edge neural interfaces and quantum computing applications.',
-          date: '2070-05-15T00:00:00Z',
-          time: '18:00 - 22:00',
-          location: 'Quantum District, Neo Tokyo',
-          attendeeCount: 0
-        };
-        
-        localStorage.setItem('events', JSON.stringify([sampleEvent]));
-        set({ events: [sampleEvent], isLoading: false });
-      } else {
-        const parsedEvents = JSON.parse(storedEvents);
-        set({ events: parsedEvents, isLoading: false });
-      }
+      set({ events: events || [], isLoading: false });
     } catch (error) {
       set({ 
         isLoading: false, 
-        error: error instanceof Error ? error.message : 'Failed to load events'
+        error: error instanceof Error ? error.message : 'Failed to load events' 
       });
     }
   },
@@ -140,18 +83,14 @@ export const useAttendeeStore = create<AttendeeState>((set, get) => ({
     set({ isLoading: true });
     
     try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 600));
+      const { data: attendees, error } = await supabase
+        .from('attendees')
+        .select('*')
+        .order('rsvp_date', { ascending: false });
       
-      const storedAttendees = localStorage.getItem('attendees');
-      if (storedAttendees) {
-        set({ 
-          attendees: JSON.parse(storedAttendees),
-          isLoading: false 
-        });
-      } else {
-        set({ attendees: [], isLoading: false });
-      }
+      if (error) throw error;
+      
+      set({ attendees: attendees || [], isLoading: false });
     } catch (error) {
       set({ 
         isLoading: false, 

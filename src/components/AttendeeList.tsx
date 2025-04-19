@@ -1,16 +1,10 @@
-
 import React from 'react';
 import { User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { Database } from '@/integrations/supabase/types';
 
-type Attendee = {
-  id: string;
-  name: string;
-  email: string;
-  avatarUrl?: string;
-  rsvpDate: string;
-};
+type Attendee = Database['public']['Tables']['attendees']['Row'];
 
 type AttendeeListProps = {
   attendees: Attendee[];
@@ -39,14 +33,16 @@ const AttendeeList = ({ attendees, isLoading = false }: AttendeeListProps) => {
                 className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 backdrop-blur-sm border border-white/5 hover:border-neo-cyan/40 transition-all"
               >
                 <Avatar className="h-10 w-10 border border-neo-cyan/30 animate-pulse-border">
-                  <AvatarImage src={attendee.avatarUrl} />
+                  <AvatarImage src={attendee.avatar_url || undefined} />
                   <AvatarFallback className="bg-background">
                     <User className="h-5 w-5 text-neo-purple" />
                   </AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="font-medium">{attendee.name}</div>
-                  <div className="text-xs text-muted-foreground">RSVP'd {new Date(attendee.rsvpDate).toLocaleDateString()}</div>
+                  <div className="text-xs text-muted-foreground">
+                    RSVP'd {new Date(attendee.rsvp_date).toLocaleDateString()}
+                  </div>
                 </div>
               </div>
             ))
