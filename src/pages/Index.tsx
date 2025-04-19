@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useAttendeeStore } from '@/stores/attendeeStore';
 import EventCard from '@/components/EventCard';
 import AttendeeList from '@/components/AttendeeList';
@@ -8,7 +8,7 @@ import RSVPForm from '@/components/RSVPForm';
 const Index = () => {
   const { events, loadEvents, loadAttendees, getAttendeesByEventId, isLoading } = useAttendeeStore();
 
-  useEffect(() => {
+  React.useEffect(() => {
     // Load data on component mount
     loadEvents();
     loadAttendees();
@@ -42,7 +42,7 @@ const Index = () => {
           <EventCard event={event} />
           
           <div className="mt-8">
-            <AttendeeList attendees={attendees} />
+            <AttendeeList attendees={attendees} isLoading={isLoading} />
           </div>
         </div>
         
