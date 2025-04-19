@@ -4,9 +4,12 @@ import { useAttendeeStore } from '@/stores/attendeeStore';
 import EventCard from '@/components/EventCard';
 import AttendeeList from '@/components/AttendeeList';
 import RSVPForm from '@/components/RSVPForm';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Index = () => {
   const { events, loadEvents, loadAttendees, getAttendeesByEventId, isLoading } = useAttendeeStore();
+  const [currentEventIndex, setCurrentEventIndex] = React.useState(0);
 
   React.useEffect(() => {
     // Load data on component mount
@@ -14,9 +17,16 @@ const Index = () => {
     loadAttendees();
   }, [loadEvents, loadAttendees]);
 
-  // We're using the first event for this simple version
-  const event = events[0];
+  const event = events[currentEventIndex];
   const attendees = event ? getAttendeesByEventId(event.id) : [];
+
+  const handlePrevEvent = () => {
+    setCurrentEventIndex((prev) => (prev > 0 ? prev - 1 : prev));
+  };
+
+  const handleNextEvent = () => {
+    setCurrentEventIndex((prev) => (prev < events.length - 1 ? prev + 1 : prev));
+  };
 
   if (isLoading || !event) {
     return (
@@ -37,17 +47,40 @@ const Index = () => {
         </p>
       </header>
       
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <EventCard event={event} />
-          
-          <div className="mt-8">
-            <AttendeeList attendees={attendees} isLoading={isLoading} />
+      <div className="max-w-7xl mx-auto">
+        {events.length > 1 && (
+          <div className="flex justify-center gap-4 mb-8">
+            <Button
+              variant="outline"
+              onClick={handlePrevEvent}
+              disabled={currentEventIndex === 0}
+              className="neo-button"
+            >
+              <ChevronLeft className="mr-1" /> Previous Event
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleNextEvent}
+              disabled={currentEventIndex === events.length - 1}
+              className="neo-button"
+            >
+              Next Event <ChevronRight className="ml-1" />
+            </Button>
           </div>
-        </div>
+        )}
         
-        <div>
-          <RSVPForm eventId={event.id} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <EventCard event={event} />
+            
+            <div className="mt-8">
+              <AttendeeList attendees={attendees} isLoading={isLoading} />
+            </div>
+          </div>
+          
+          <div>
+            <RSVPForm eventId={event.id} />
+          </div>
         </div>
       </div>
       
@@ -59,3 +92,4 @@ const Index = () => {
 };
 
 export default Index;
+

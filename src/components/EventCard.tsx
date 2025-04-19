@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { CalendarCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatEventTime } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 type Event = Database['public']['Tables']['events']['Row'];
@@ -12,7 +13,48 @@ type EventCardProps = {
 };
 
 const EventCard = ({ event }: EventCardProps) => {
-  const attendeeCount = event.id ? 0 : 0; // Will be implemented later with a count query
+  const [attendeeCount, setAttendeeCount] = useState(0);
+
+  useEffect(() => {
+    // Get initial count
+    const getAttendeeCount = async () => {
+      const { count } = await supabase
+        .from('attendees')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', event.id);
+      
+      setAttendeeCount(count || 0);
+    };
+
+    getAttendeeCount();
+
+    // Subscribe to changes
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'attendees',
+          filter: `event_id=eq.${event.id}`
+        },
+        async () => {
+          // Refresh count on any changes
+          const { count } = await supabase
+            .from('attendees')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', event.id);
+          
+          setAttendeeCount(count || 0);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [event.id]);
 
   return (
     <Card className="neo-card animate-float">
@@ -41,3 +83,4 @@ const EventCard = ({ event }: EventCardProps) => {
 };
 
 export default EventCard;
+
