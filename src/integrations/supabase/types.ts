@@ -50,6 +50,7 @@ export type Database = {
       events: {
         Row: {
           created_at: string
+          creation_password: string
           date: string
           description: string | null
           id: string
@@ -60,6 +61,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          creation_password?: string
           date: string
           description?: string | null
           id?: string
@@ -70,6 +72,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          creation_password?: string
           date?: string
           description?: string | null
           id?: string
